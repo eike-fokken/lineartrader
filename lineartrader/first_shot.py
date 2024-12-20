@@ -1,4 +1,8 @@
+"""First shot."""
+
 from copy import deepcopy
+
+import casadi
 
 items: list[str] = [
     "Rentier",
@@ -9,6 +13,12 @@ items: list[str] = [
     "Lebkuchen",
 ]
 
+trade_names: list[str] = [
+    "Pascaline",
+    "Isidor",
+    "Elsbeth",
+    "Weihnachtsmann",
+]
 
 default_stock: dict[str, int] = {item: 0 for item in items}
 stock = deepcopy(default_stock)
@@ -43,3 +53,42 @@ weihnachtsmanns_trade = deepcopy(default_stock)
 weihnachtsmanns_trade["Geschenk"] = 1
 weihnachtsmanns_trade["Weihnachtsmütze"] = -3
 trades["Weihnachtsmann"] = weihnachtsmanns_trade
+
+
+assert sorted(list(trades.keys())) == sorted(trade_names)
+
+trade_numbers: dict[str, casadi.MX] = {
+    trade: casadi.MX.sym(trade, 1) for trade in trade_names
+}
+
+casadi_variables = casadi.vertcat(*[trade for trade in trade_numbers.values()])
+
+discrete = [True] * len(trade_numbers)
+
+our_constraints = {
+    item: sum([trade[item] * trade_numbers[name] for name, trade in trades.items()])
+    for item in items
+}
+casadi_constraints = casadi.vertcat(*list(our_constraints.values()))
+
+constraint_upper_bounds = [1e21] * len(items)
+constraint_lower_bounds = [-stock[item] for item in items]
+
+
+variable_lower_bounds = [0] * len(trades)
+variable_upper_bounds = [1e21] * len(trades)
+
+objective = -our_constraints["Rentier"]
+
+
+problem = {"x": casadi_variables, "g": casadi_constraints, "f": objective}
+solver = casadi.qpsol("solver", "highs", problem, {"discrete": discrete})
+
+result = solver(
+    x0=[0] * len(trades),
+    lbx=variable_lower_bounds,
+    ubx=variable_upper_bounds,
+    lbg=constraint_lower_bounds,
+    ubg=constraint_upper_bounds,
+)
+print(result)
