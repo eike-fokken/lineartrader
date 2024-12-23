@@ -1,5 +1,6 @@
 """First shot."""
 
+import json
 from copy import deepcopy
 
 import casadi
@@ -21,6 +22,7 @@ trade_names: list[str] = [
 ]
 
 default_stock: dict[str, int] = {item: 0 for item in items}
+
 stock = deepcopy(default_stock)
 stock["Schneemann"] = 14
 stock["Weihnachtsmütze"] = 21
@@ -54,6 +56,8 @@ weihnachtsmanns_trade["Geschenk"] = 1
 weihnachtsmanns_trade["Weihnachtsmütze"] = -3
 trades["Weihnachtsmann"] = weihnachtsmanns_trade
 
+
+print(json.dumps(trades, indent=2))
 
 assert sorted(list(trades.keys())) == sorted(trade_names)
 
@@ -91,4 +95,6 @@ result = solver(
     lbg=constraint_lower_bounds,
     ubg=constraint_upper_bounds,
 )
-print(result)
+objective_value = result["f"]
+
+print(f"\n\nDu kannst höchstens {-objective_value} Rentiere bekommen.")
